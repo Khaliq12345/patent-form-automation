@@ -1,0 +1,7 @@
+informations
+*.json
+*.lock
+.venv
+__pycache__
+config.py
+*.ipynb
