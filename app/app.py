@@ -74,7 +74,7 @@ class PatentForm:
     def save_to_local(self, model: model.CompanyModel):
         if self.verify_password():
             self.model_validation(model)
-            with open('companyInfo.json', 'w') as f:
+            with open('../companyInfo.json', 'w') as f:
                 f.write(model.model_dump_json())
             ui.notify(
                 message='Company Info updated',
