@@ -136,7 +136,7 @@ class PatentForm:
                 f'stack-label outlined hint="{hint}"',
             )
             .classes("w-full")
-        ).bind_value_to(self.form_model, binder)
+        ).bind_value(self.form_model, binder)
 
 
     def legal_form(self, text_class: str):
