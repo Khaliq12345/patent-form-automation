@@ -137,7 +137,7 @@ async def payment_form(page: Page, form_model: CompanyModel, logger: dict):
         await page.get_by_label("State / Region *").fill(form_model.card_state)
     await page.get_by_label("Zip / Postal Code *").fill(form_model.card_postalcode)
     await page.get_by_role("button", name="Submit Payment").click()
-    log_info(logger=logger, info=f'Payment submitted, now waiting for 1 minutes to complete all')
+    log_info(logger=logger, info=f'Payment submitted, now waiting for 1 minute to complete all')
     await page.wait_for_timeout(60000)
     if await page.get_by_role('button', name='No Thanks').is_visible():
         await page.get_by_role('button', name='No Thanks').click()
