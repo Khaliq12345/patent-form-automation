@@ -2,7 +2,7 @@ import sys, os, pathlib
 sys.path.append(
     pathlib.Path(os.getcwd()).parent.as_posix()
 )
-from nicegui import ui
+from nicegui import ui, app, events
 from nicegui.ui import select
 import constants
 from constants import constants
@@ -10,8 +10,16 @@ from backend import state_service
 import asyncio, json
 from model import model
 from bot import bot
-from config import PASSWORD
-            
+from config import ADMIN_PASSWORD
+from dateparser import parse
+
+
+def is_logged_in(loginfo: dict):
+    print(loginfo)
+    if (loginfo.get('password') == ADMIN_PASSWORD):
+        if parse(loginfo.get('exp')) > parse('now'):
+            return True     
+                
 
 class PatentForm:
     def __init__(self, form_model: model.ApplicantModel | model.CompanyModel, is_admin: bool = False):
@@ -20,12 +28,14 @@ class PatentForm:
         self.password = ''
         self.is_admin = is_admin
         self.log = {'log': 'Not started'}
+        self.pdf_bytes = None
         
     
     def verify_password(self):
-        if self.password == PASSWORD:
-            self.dialog.close()
-            return True
+        if self.password == ADMIN_PASSWORD:
+            app.storage.user['password'] = self.password
+            app.storage.user['exp'] = parse('in 3 minutes').ctime()
+            ui.navigate.reload()
         else:
             ui.notification(
                 message='Incorrect password',
@@ -33,21 +43,23 @@ class PatentForm:
                 position='top',
                 close_button=True,
             )
-        
+  
         
     def change_card_state(self):
         print('Refreshed!')
         self.custom_card_state.refresh()
 
-
-    def submit(self):
-        self.dialog.open()
-           
             
     def model_validation(self, model: model.CompanyModel | model.ApplicantModel):
         model_json = model.model_dump()
         print(model_json)
         for x in model.model_fields:
+            if x == 'state':
+                print(f'State: {self.state}')
+                if self.state:
+                    model.model_fields[x].description = 'required'
+                else:
+                    model.model_fields[x].description = ''
             if model.model_fields[x].description == 'required':
                 if (model_json[x] == '') or (not model_json[x]):
                     ui.notify(
@@ -62,9 +74,8 @@ class PatentForm:
     async def start_bot(self, model: model.ApplicantModel):
         self.spinner.visible = True
         try:
-            if self.verify_password():
-                self.model_validation(model)
-                await bot.start_bot(model, self.log)
+            self.model_validation(model)
+            await bot.start_bot(model, self.log, self.pdf_bytes)
         except Exception as e:
             print(f'Error: {e}')
         finally:
@@ -72,15 +83,14 @@ class PatentForm:
         
         
     def save_to_local(self, model: model.CompanyModel):
-        if self.verify_password():
-            self.model_validation(model)
-            with open('../companyInfo.json', 'w') as f:
-                f.write(model.model_dump_json())
-            ui.notify(
-                message='Company Info updated',
-                type='positive',
-                position='top'
-            )
+        self.model_validation(model)
+        with open('../companyInfo.json', 'w') as f:
+            f.write(model.model_dump_json())
+        ui.notify(
+            message='Company Info updated',
+            type='positive',
+            position='top'
+        )
     
 
     async def update_states(self, country_code, state_province: select):
@@ -91,15 +101,6 @@ class PatentForm:
         state_province.enable()
         state_province.set_options(self.state)
 
-
-    def authenticate_dialog(self):
-        with ui.dialog() as self.dialog, ui.card():
-            ui.input('Password').bind_value_to(self, 'password')
-            ui.button(
-                'Submit Form', 
-                on_click=lambda: self.save_to_local(self.form_model) \
-                if self.is_admin else self.start_bot(self.form_model)
-            )
             
     @ui.refreshable
     def custom_card_state(self):
@@ -231,7 +232,11 @@ class PatentForm:
         self.custom_input('City', binder='card_city')
         self.custom_card_state()
         self.custom_input('Postal Code', binder='card_postalcode')
-               
+    
+    
+    def handle_upload(self, e: events.UploadEventArguments):
+        self.pdf_bytes = e.content.read()
+                
       
     def large_screen(self):
         with ui.element('div').classes('w-full p-5 max-md:hidden'):
@@ -245,10 +250,15 @@ class PatentForm:
                     self.mail_form(text_class)
                 with ui.column():
                     self.application_form(text_class)
+                with ui.column():
+                    ui.label('Upload Documents').classes(text_class)
+                    ui.upload(label='Upload File', auto_upload=True).on_upload(
+                        self.handle_upload
+                    ).props('accept=.pdf')
                 
             ui.button("Submit").classes('full-width m-5').props(
                 'unelevated'
-            ).on_click(lambda: self.submit())
+            ).on_click(lambda: self.start_bot(self.form_model))
             ui.label('Logs').classes('font-mono text-h4 text-center').bind_text(self.log, 'log')
             
             
@@ -263,9 +273,14 @@ class PatentForm:
                 self.mail_form(text_class)
             with ui.column():
                 self.application_form(text_class)
+            with ui.column():
+                ui.label('Upload Documents').classes(text_class)
+                ui.upload(label='Upload File', auto_upload=True).on_upload(
+                    self.handle_upload
+                ).props('accept=.pdf')
             ui.button("Submit").classes('w-full').props(
                 'unelevated'
-            ).on_click(lambda: self.submit())
+            ).on_click(lambda: self.start_bot(self.form_model))
             ui.label('Logs').classes('font-mono text-h5 text-center').bind_text(self.log, 'log')
 
 
@@ -288,7 +303,7 @@ class PatentForm:
         
             ui.button("Submit").classes('full-width m-5').props(
                 'unelevated'
-            ).on_click(lambda: self.submit())
+            ).on_click(lambda: self.save_to_local(self.form_model))
     
     
     def admin_small_screen(self):
@@ -308,23 +323,31 @@ class PatentForm:
                 self.billing_address(text_class)
             ui.button("Submit").classes('w-full').props(
                 'unelevated'
-            ).on_click(lambda: self.submit())
+            ).on_click(lambda: self.save_to_local(self.form_model))
     
     
     def main(self):
-        with ui.header().classes('justify-center'):
-            ui.label("PATENT CENTER FORM").classes('text-h4')
-            self.spinner = ui.spinner(type='cube', color='white', size='lg')
-            self.spinner.visible = False
-        
-        self.authenticate_dialog()
-        
         if not self.is_admin:
+            with ui.header().classes('justify-center'):
+                ui.label("PATENT CENTER FORM").classes('text-h4')
+                self.spinner = ui.spinner(type='cube', color='white', size='lg')
+                self.spinner.visible = False
             self.large_screen()
             self.small_screen()
         else:
-            self.admin_large_screen()
-            self.admin_small_screen()
+            with ui.header().classes('justify-center'):
+                ui.label("ADMIN PATENT CENTER FORM").classes('text-h4')
+                self.spinner = ui.spinner(type='cube', color='white', size='lg')
+                self.spinner.visible = False
+            if is_logged_in(app.storage.user):
+                self.admin_large_screen()
+                self.admin_small_screen()
+            else:    
+                with ui.row().classes('w-full') as login_page:
+                    ui.input('Password', password=True).bind_value_to(self, 'password')
+                    ui.button('Login').on_click(
+                        lambda: self.verify_password()
+                    )
             
 
 @ui.page('/', title='Form')
@@ -345,4 +368,4 @@ def admin_page():
     form.main()
     
     
-ui.run(port=5000)
+ui.run(port=5000, storage_secret='Tester')

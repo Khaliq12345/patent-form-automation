@@ -16,7 +16,7 @@ class CustomerModel(BaseModel):
     address1: str = Field(default='', description='required')
     address2: str = ''
     city: str = Field(default='', description='required')
-    state: str = Field(default='', description='required')
+    state: str | None = ''
     postal_code: str = ''
     
     

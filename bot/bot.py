@@ -2,6 +2,7 @@ import os, sys, pathlib
 sys.path.append(pathlib.Path(os.getcwd()).parent.as_posix())
 
 from playwright.async_api import async_playwright, expect, Page
+import pymupdf
 import asyncio
 from model.model import CompanyModel, ApplicantModel
 from typing import Union
@@ -43,7 +44,8 @@ async def add_new_inventor(page: Page, form_model: Union[ApplicantModel, Company
         await page.fill('input[formcontrolname="addressLineTwoText"]', form_model.address2) #optional
     await page.fill('input[formcontrolname="cityName"]', form_model.city)
     await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
-    await page.select_option('select[formcontrolname="geographicRegionCode"]', form_model.state)
+    if form_model.state:
+        await page.select_option('select[formcontrolname="geographicRegionCode"]', form_model.state)
     await page.fill('input[formcontrolname="postalCode"]', form_model.postal_code)
     await page.locator('button[id="btn_add"]').first.click()
     await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
@@ -56,7 +58,8 @@ async def add_correspondance(page: Page, form_model: CompanyModel):
     await page.fill('input[formcontrolname="addressLineOneText"]', form_model.address1)
     await page.fill('input[formcontrolname="addressLineTwoText"]', form_model.address2) #optional
     await page.fill('input[formcontrolname="cityName"]', form_model.city)
-    await page.select_option('select[formcontrolname="regionCode"]', form_model.state)
+    if form_model.state:
+        await page.select_option('select[formcontrolname="regionCode"]', form_model.state)
     await page.fill('input[formcontrolname="postalCode"]', form_model.postal_code) #optional
     await page.fill('input[formcontrolname="correspondencePhoneNumber"]', form_model.telephone) #optional
     await page.fill('input[formcontrolname="correspondenceFaxNumber"]', form_model.fax_number) #optional
@@ -91,7 +94,8 @@ async def add_new_applicant_assignee(page: Page, form_model: CompanyModel, is_ap
     await page.fill('input[formcontrolname="addressLineOneText"]', form_model.address1)
     await page.fill('input[formcontrolname="addressLineTwoText"]', form_model.address2) #optional
     await page.fill('input[formcontrolname="cityName"]', form_model.city)
-    await page.select_option('select[formcontrolname="geographicRegionCode"]', form_model.state)
+    if form_model.state:
+        await page.select_option('select[formcontrolname="geographicRegionCode"]', form_model.state)
     await page.fill('input[formcontrolname="postalCode"]', form_model.postal_code)
     await page.fill('input[formcontrolname="phoneNumber"]', form_model.telephone) #optional
     await page.fill('input[formcontrolname="faxNumber"]', form_model.fax_number) #optional
@@ -149,11 +153,40 @@ async def payment_form(page: Page, form_model: CompanyModel, logger: dict):
         return True
 
 
+async def upload_file(page: Page, pdf_bytes: bytes, logger: dict):
+    if pdf_bytes:
+        async with page.expect_file_chooser() as fc_info:
+            await page.locator('input[id="customInput"]').first.click()
+        file_chooser = await fc_info.value
+        file_info = {
+            'name': 'upload.pdf',
+            "mimeType": "application/pdf",
+            'buffer': pdf_bytes
+        }
+        await file_chooser.set_files(file_info)
+        await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
+        doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+        page_count = doc.page_count
+    else:
+        page_count = 2
+    await page.locator('button.openMenu').first.click()
+    await page.get_by_role("button", name="Application Part").click()
+    await page.get_by_role("button", name="Specification", exact=True).click()
+    await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
+    await go_to_next_section(page, click_continue=True)
+    
+    #Eight Form
+    log_info(logger=logger, info="Calculating Fess")
+    await page.get_by_text("Small").click()
+    await page.fill('input[formcontrolname="pageTotalQuantity"]', f'{page_count}')
+    log_info(logger=logger, info="Done Calculating Fess")
+
+
 async def save_info(
     page: Page, 
     customer_model: ApplicantModel, 
-    company_model: CompanyModel, 
-    is_paid: bool
+    is_paid: bool,
+    pdf_bytes: bytes
     ):
     current_date = parse('now').strftime('%Y%m%d')
     application_string = await page.get_by_text("Application #").first.text_content()
@@ -165,11 +198,12 @@ async def save_info(
     await page.screenshot(path=f'{folder}/{file_name}.png', full_page=True)
     model_info = {
         'customer': json.loads(customer_model.model_dump_json()),
-        'company': json.loads(company_model.model_dump_json()),
         'success': is_paid,
     }
     with open(f'{folder}/{file_name}.json', 'w') as f:
         f.write(json.dumps(model_info))
+    with open(f'{folder}/{file_name}_uploaded.pdf', 'wb') as f:
+        f.write(pdf_bytes)
     print('Data Saved')
 
 
@@ -178,12 +212,12 @@ def log_info(info, logger):
     logger['log'] = info
 
 
-async def start_bot(customer_model: ApplicantModel, logger: dict):
+async def start_bot(customer_model: ApplicantModel, logger: dict, pdf_bytes: bytes):
     company_model = load_company_model()
     log_info(logger=logger, info="Running")
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(slow_mo=300)
+            browser = await p.chromium.launch(slow_mo=300, headless=False)
             page = await browser.new_page()
             await page.goto('https://patentcenter.uspto.gov/', wait_until='load')
             await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
@@ -247,21 +281,16 @@ async def start_bot(customer_model: ApplicantModel, logger: dict):
             log_info(logger=logger, info="Done adding signature")
             
             #Seventh Form
+            await go_to_next_section(page, click_continue=True)
             log_info(logger=logger, info="Uploading pdf")
-            await go_to_next_section(page, click_continue=True)
-            #upload file
-            await go_to_next_section(page, click_continue=True)
+            await upload_file(page, pdf_bytes, logger)
             log_info(logger=logger, info="Done Uploading pdf")
-            
-            #Eight Form
-            log_info(logger=logger, info="Choosing payment type")
-            await page.get_by_text("Small").click()
-            await page.fill('input[formcontrolname="pageTotalQuantity"]', '2')
-            log_info(logger=logger, info="Done Choosing payment type")
             
             #Nineth Form
             await go_to_next_section(page, click_continue=True)
+            await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
             await page.click('input[id="chkBx_0"]')
+
             
             #Tenth Form
             log_info(logger=logger, info="Reviewing")
@@ -277,12 +306,13 @@ async def start_bot(customer_model: ApplicantModel, logger: dict):
             await page.wait_for_load_state(timeout=100000)
             is_paid = await payment_form(page, company_model, logger)
             
-            await save_info(page, customer_model, company_model, is_paid=is_paid)
+            await save_info(page, customer_model, is_paid=is_paid, pdf_bytes=pdf_bytes)
 
-            #await page.wait_for_timeout(100000)
+            #await page.wait_for_timeout(100000)gggg
             await browser.close()
     except Exception as e:
        log_info(logger=logger, info=f"Error: {e}")
+    
         
 if __name__ == '__main__':
     asyncio.run(start_bot())
