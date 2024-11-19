@@ -217,7 +217,7 @@ async def start_bot(customer_model: ApplicantModel, logger: dict, pdf_bytes: byt
     log_info(logger=logger, info="Running")
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(slow_mo=300, headless=False)
+            browser = await p.chromium.launch(slow_mo=300)
             page = await browser.new_page()
             await page.goto('https://patentcenter.uspto.gov/', wait_until='load')
             await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
