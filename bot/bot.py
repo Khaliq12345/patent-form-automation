@@ -173,18 +173,18 @@ async def upload_file(page: Page, pdf_bytes: bytes, logger: dict):
         await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden(timeout=100000)
         doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
         page_count = doc.page_count
+        if await page.locator('.alert.alert-danger').first.is_visible():
+            error_text = await page.locator('.alert.alert-danger').first.text_content()
+            log_info(logger=logger, info=error_text)
+            raise FileExistsError(error_text)
+        await page.locator('button.openMenu').first.click()
+        await page.get_by_role("button", name="Application Part").click()
+        await page.get_by_role("button", name="Specification", exact=True).click()
+        await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden(timeout=100000)
     else:
         page_count = 2
-    if await page.locator('.alert.alert-danger').first.is_visible():
-        error_text = await page.locator('.alert.alert-danger').first.text_content()
-        log_info(logger=logger, info=error_text)
-        raise FileExistsError(error_text)
-    await page.locator('button.openMenu').first.click()
-    await page.get_by_role("button", name="Application Part").click()
-    await page.get_by_role("button", name="Specification", exact=True).click()
-    await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden(timeout=100000)
     await go_to_next_section(page, click_continue=True)
-    
+
     #Eight Form
     log_info(logger=logger, info="Calculating Fess")
     await page.get_by_text("Small").click()
