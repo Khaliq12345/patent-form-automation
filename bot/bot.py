@@ -34,6 +34,7 @@ async def add_new_inventor(page: Page, form_model: Union[ApplicantModel, Company
 
     #Residence Information
     await page.select_option('select[formcontrolname="residencyTypeIdentifier"]', form_model.residency_type)
+    print(form_model.residency_city, form_model.residency_state)
     if form_model.residency_type == '1':
         await page.fill('input[formcontrolname="residencyCityName"]', form_model.residency_city)
         await page.select_option('select[formcontrolname="residencyRegionCode"]', form_model.residency_state)
