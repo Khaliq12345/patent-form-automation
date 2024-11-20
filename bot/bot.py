@@ -33,9 +33,15 @@ async def add_new_inventor(page: Page, form_model: Union[ApplicantModel, Company
         await page.select_option('select[formcontrolname="suffixName"]', form_model.suffix) #optional
 
     #Residence Information
-    await page.select_option('select[formcontrolname="residencyTypeIdentifier"]', '1')
-    await page.fill('input[formcontrolname="residencyCityName"]', form_model.residency_city)
-    await page.select_option('select[formcontrolname="residencyRegionCode"]', form_model.residency_state)
+    await page.select_option('select[formcontrolname="residencyTypeIdentifier"]', form_model.residency_type)
+    if form_model.residency_type == '1':
+        await page.fill('input[formcontrolname="residencyCityName"]', form_model.residency_city)
+        await page.select_option('select[formcontrolname="residencyRegionCode"]', form_model.residency_state)
+    elif form_model.residency_type == '2':
+        await page.fill('input[formcontrolname="residencyCityName"]', form_model.residency_city)
+        await page.fill('select[formcontrolname="residencyCountryCode"]', form_model.country)
+    else:
+        pass
 
     #Mailing Address
     await page.select_option('select[formcontrolname="countryCode"]', form_model.country)
@@ -223,7 +229,7 @@ async def start_bot(customer_model: ApplicantModel, logger: dict, pdf_bytes: byt
         async with async_playwright() as p:
             browser = await p.chromium.launch(slow_mo=300)
             page = await browser.new_page()
-            await page.goto('https://patentcenter.uspto.gov/', wait_until='load')
+            await page.goto('https://patentcenter.uspto.gov/', wait_until='load', timeout=100000)
             await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
             log_info(logger=logger, info="Page LOADED")
 

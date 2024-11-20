@@ -156,15 +156,50 @@ class PatentForm:
             binder='suffix'
         )
         
-        
+    
+    def update_residency_state(self):
+        self.set_residency_form.refresh()
+    
+    @ui.refreshable
+    def set_residency_form(self):
+        if self.form_model.residency_type == '1':
+            self.form_model.residency_country = None
+            self.custom_input('City', binder='residency_city')
+            self.custom_select('State / province', 
+                options=constants.US_STATES,
+                binder='residency_state'
+            )
+            self.form_model.model_fields['residency_state'].description = 'required'
+            self.form_model.model_fields['residency_city'].description = 'required'
+            self.form_model.model_fields['residency_country'].description = ''
+        elif self.form_model.residency_type == '2':
+            self.form_model.residency_state = None
+            self.custom_input('City', binder='residency_city')
+            self.custom_select(
+                'Country of residence', 
+                constants.COUNTRIES, 
+                binder='residency_country'
+            )
+            self.form_model.model_fields['residency_state'].description = ''
+            self.form_model.model_fields['residency_city'].description = 'required'
+            self.form_model.model_fields['residency_country'].description = 'required'
+        else:
+            self.form_model.residency_city = None
+            self.form_model.residency_country = None
+            self.form_model.residency_state = None
+            self.form_model.model_fields['residency_state'].description = ''
+            self.form_model.model_fields['residency_city'].description = ''
+            self.form_model.model_fields['residency_country'].description = ''
+    
+     
     def residence_form(self, text_class: str):
         ui.label("Residence Information").classes(text_class)
-        #self.custom_select('Residency Type', options=constants.RESIDENCY_TYPE)
-        self.custom_input('City', binder='residency_city')
-        self.custom_select('State / province', 
-            options=constants.US_STATES,
-            binder='residency_state'
-        )
+        self.custom_select(
+            'Residency Type', 
+            options=constants.RESIDENCY_TYPE, 
+            binder='residency_type'
+        ).on_value_change(lambda: self.update_residency_state())
+        self.set_residency_form()
         
 
     def mail_form(self, text_class: str):
