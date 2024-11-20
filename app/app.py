@@ -242,7 +242,7 @@ class PatentForm:
         ui.label("Contact information").classes(text_class)
         self.custom_input('Telephone number', binder='telephone', hint='Optional')
         self.custom_input('Fax number', binder='fax_number', hint='Optional')
-        self.custom_input('Email Address 1', binder='email_address1', hint='Optional')
+        self.custom_input('Email Address 1', binder='email_address1')
         self.custom_input('Email Address 2', binder='email_address2', hint='Optional')
         self.custom_input('Email Address 3', binder='email_address3', hint='Optional')
         self.custom_input('Registration Number', binder='registration_number', hint='Optional')

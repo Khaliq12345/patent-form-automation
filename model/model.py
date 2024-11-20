@@ -32,7 +32,7 @@ class ApplicantModel(CustomerModel):
 class CompanyModel(CustomerModel):
     telephone: str | None = None
     fax_number: str | None = None
-    email_address1: str | None = None
+    email_address1: str | None = Field(default=None, description='required')
     email_address2: str | None = None
     email_address3: str | None = None
     registration_number: str | None = Field(default=None, description='required')

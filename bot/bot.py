@@ -34,7 +34,6 @@ async def add_new_inventor(page: Page, form_model: Union[ApplicantModel, Company
 
     #Residence Information
     await page.select_option('select[formcontrolname="residencyTypeIdentifier"]', form_model.residency_type)
-    print(form_model.residency_city, form_model.residency_state)
     if form_model.residency_type == '1':
         await page.fill('input[formcontrolname="residencyCityName"]', form_model.residency_city)
         await page.select_option('select[formcontrolname="residencyRegionCode"]', form_model.residency_state)
@@ -53,7 +52,8 @@ async def add_new_inventor(page: Page, form_model: Union[ApplicantModel, Company
     await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
     if form_model.state:
         await page.select_option('select[formcontrolname="geographicRegionCode"]', form_model.state)
-    await page.fill('input[formcontrolname="postalCode"]', form_model.postal_code)
+    if form_model.postal_code:
+        await page.fill('input[formcontrolname="postalCode"]', form_model.postal_code)
     await page.locator('button[id="btn_add"]').first.click()
     await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
     
@@ -61,26 +61,38 @@ async def add_new_inventor(page: Page, form_model: Union[ApplicantModel, Company
 async def add_correspondance(page: Page, form_model: CompanyModel):
     await page.select_option('select[formcontrolname="corrCountryCode"]', form_model.country)
     await page.fill('input[formcontrolname="nameLineOneText"]', form_model.given_name)
-    await page.fill('input[formcontrolname="nameLineTwoText"]', form_model.family_name) #optional
+    if form_model.family_name:
+        await page.fill('input[formcontrolname="nameLineTwoText"]', form_model.family_name) #optional
     await page.fill('input[formcontrolname="addressLineOneText"]', form_model.address1)
-    await page.fill('input[formcontrolname="addressLineTwoText"]', form_model.address2) #optional
+    if form_model.address2:
+        await page.fill('input[formcontrolname="addressLineTwoText"]', form_model.address2) #optional
     await page.fill('input[formcontrolname="cityName"]', form_model.city)
     if form_model.state:
         await page.select_option('select[formcontrolname="regionCode"]', form_model.state)
-    await page.fill('input[formcontrolname="postalCode"]', form_model.postal_code) #optional
-    await page.fill('input[formcontrolname="correspondencePhoneNumber"]', form_model.telephone) #optional
-    await page.fill('input[formcontrolname="correspondenceFaxNumber"]', form_model.fax_number) #optional
-    await page.fill('input[formcontrolname="correspondenceEmailAddress0"]', form_model.email_address1) #optional
-    await page.fill('input[formcontrolname="correspondenceEmailAddress1"]', form_model.email_address2) #optional
-    await page.fill('input[formcontrolname="correspondenceEmailAddress2"]', form_model.email_address3) #optional
+    if form_model.postal_code:
+        await page.fill('input[formcontrolname="postalCode"]', form_model.postal_code) #optional
+    if form_model.telephone:    
+        await page.fill('input[formcontrolname="correspondencePhoneNumber"]', form_model.telephone) #optional
+    if form_model.fax_number:
+        await page.fill('input[formcontrolname="correspondenceFaxNumber"]', form_model.fax_number) #optional
+    if form_model.email_address1:
+        await page.fill('input[formcontrolname="correspondenceEmailAddress0"]', form_model.email_address1) #optional
+    if form_model.email_address2:
+        await page.fill('input[formcontrolname="correspondenceEmailAddress1"]', form_model.email_address2) #optional
+    if form_model.email_address3:
+        await page.fill('input[formcontrolname="correspondenceEmailAddress2"]', form_model.email_address3) #optional
 
 
 async def add_application(page: Page, form_model: ApplicantModel):
-    await page.fill('textarea[formcontrolname="inventionTitle"]', form_model.invention_title) #optional
-    await page.fill('input[formcontrolname="attorneyDocketNumber"]', form_model.attorney_docket) #optional
-    await page.select_option('select[formcontrolname="entityStatus"]', form_model.entity_status)  #optional
-    await page.fill('input[formcontrolname="drawingSheetTotalQuantity"]', form_model.total_number_of_drawing_sheet)
-    await page.fill('input[formcontrolname="suggestedPublicationFigureText"]', form_model.suggested_figure_for_publication)
+    await page.fill('textarea[formcontrolname="inventionTitle"]', form_model.invention_title)
+    if form_model.attorney_docket:
+        await page.fill('input[formcontrolname="attorneyDocketNumber"]', form_model.attorney_docket) #optional
+    if form_model.entity_status:
+        await page.select_option('select[formcontrolname="entityStatus"]', form_model.entity_status)  #optional
+    if form_model.total_number_of_drawing_sheet:
+        await page.fill('input[formcontrolname="drawingSheetTotalQuantity"]', form_model.total_number_of_drawing_sheet) #optional
+    if form_model.suggested_figure_for_publication:
+        await page.fill('input[formcontrolname="suggestedPublicationFigureText"]', form_model.suggested_figure_for_publication)
 
 
 async def go_to_next_section(page: Page, click_continue: bool = False):
@@ -99,14 +111,19 @@ async def add_new_applicant_assignee(page: Page, form_model: CompanyModel, is_ap
 
     await page.select_option('select[formcontrolname="countryCode"]', form_model.country)
     await page.fill('input[formcontrolname="addressLineOneText"]', form_model.address1)
-    await page.fill('input[formcontrolname="addressLineTwoText"]', form_model.address2) #optional
+    if form_model.address2:
+        await page.fill('input[formcontrolname="addressLineTwoText"]', form_model.address2) #optional
     await page.fill('input[formcontrolname="cityName"]', form_model.city)
     if form_model.state:
         await page.select_option('select[formcontrolname="geographicRegionCode"]', form_model.state)
-    await page.fill('input[formcontrolname="postalCode"]', form_model.postal_code)
-    await page.fill('input[formcontrolname="phoneNumber"]', form_model.telephone) #optional
-    await page.fill('input[formcontrolname="faxNumber"]', form_model.fax_number) #optional
-    await page.fill('input[formcontrolname="emailAddressText"]', form_model.email_address1) #optional
+    if form_model.postal_code:
+        await page.fill('input[formcontrolname="postalCode"]', form_model.postal_code)
+    if form_model.telephone:
+        await page.fill('input[formcontrolname="phoneNumber"]', form_model.telephone) #optional
+    if form_model.fax_number:
+        await page.fill('input[formcontrolname="faxNumber"]', form_model.fax_number) #optional
+    if form_model.email_address1:
+        await page.fill('input[formcontrolname="emailAddressText"]', form_model.email_address1) #optional
     await page.locator('button[id="btn_add"]').first.click()
     await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
 
@@ -121,7 +138,8 @@ async def add_signature(page: Page, form_model: CompanyModel):
 async def review_submit(page: Page, form_model: CompanyModel):
     await page.fill('input[formcontrolname="firstName"]', form_model.given_name)
     await page.fill('input[formcontrolname="lastName"]', form_model.family_name)
-    await page.fill('input[formcontrolname="email"]', form_model.email_address1)
+    if form_model.email_address1:
+        await page.fill('input[formcontrolname="email"]', form_model.email_address1)
     await page.click('button[id="btnSubmit"]')
     await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
 
@@ -135,7 +153,8 @@ async def payment_form(page: Page, form_model: CompanyModel, logger: dict):
     await page.get_by_label("Expiration Year").select_option(label=form_model.exp_year)
     log_info(logger=logger, info=f'Filling the Billing address information')
     await page.get_by_label("Address Line 1 *").fill(form_model.address1)
-    await page.get_by_label("Address Line 2").fill(form_model.address2)
+    if form_model.address2:
+        await page.get_by_label("Address Line 2").fill(form_model.address2)
     await page.locator("div").filter(has_text=re.compile(r"^Country \*$")).locator("span").nth(1).click()
     await page.get_by_role("option", name=form_model.card_country, exact=True).click()
     await page.get_by_label("City *").fill(form_model.card_city)
@@ -197,7 +216,7 @@ async def save_info(
     page: Page, 
     customer_model: ApplicantModel, 
     is_paid: bool,
-    pdf_bytes: bytes
+    pdf_bytes: bytes|None
     ):
     current_date = parse('now').strftime('%Y%m%d')
     application_string = await page.get_by_text("Application #").first.text_content()
@@ -213,8 +232,9 @@ async def save_info(
     }
     with open(f'{folder}/{file_name}.json', 'w') as f:
         f.write(json.dumps(model_info))
-    with open(f'{folder}/{file_name}_uploaded.pdf', 'wb') as f:
-        f.write(pdf_bytes)
+    if pdf_bytes:
+        with open(f'{folder}/{file_name}_uploaded.pdf', 'wb') as f:
+            f.write(pdf_bytes)
     print('Data Saved')
 
 
@@ -223,12 +243,12 @@ def log_info(info, logger):
     logger['log'] = info
 
 
-async def start_bot(customer_model: ApplicantModel, logger: dict, pdf_bytes: bytes):
+async def start_bot(customer_model: ApplicantModel, logger: dict, pdf_bytes: bytes|None):
     company_model = load_company_model()
     log_info(logger=logger, info="Running")
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(slow_mo=300)
+            browser = await p.chromium.launch(slow_mo=200)
             page = await browser.new_page()
             await page.goto('https://patentcenter.uspto.gov/', wait_until='load', timeout=100000)
             await expect(page.locator('div[class="progress-loader"]').first).to_be_hidden()
@@ -319,7 +339,7 @@ async def start_bot(customer_model: ApplicantModel, logger: dict, pdf_bytes: byt
             
             await save_info(page, customer_model, is_paid=is_paid, pdf_bytes=pdf_bytes)
 
-            #await page.wait_for_timeout(100000)gggg
+            #await page.wait_for_timeout(100000)
             await browser.close()
     except Exception as e:
        log_info(logger=logger, info=f"Error: {e}")
