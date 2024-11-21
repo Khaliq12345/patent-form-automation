@@ -385,7 +385,7 @@ class PatentForm:
                     )
             
 
-@ui.page('/', title='Form')
+@ui.page('/application/form', title='Form')
 def user_page():
     ui.colors(primary="black")
     form = PatentForm(form_model=model.ApplicantModel())
