@@ -403,4 +403,4 @@ def admin_page():
     form.main()
     
     
-ui.run(port=8080, storage_secret='Tester', title='Patent Form', favicon='📝')
+ui.run(host='0.0.0.0', port=5000, storage_secret='Tester', title='Patent Form', favicon='📝')
