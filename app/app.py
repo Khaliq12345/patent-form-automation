@@ -364,14 +364,14 @@ class PatentForm:
     def main(self):
         if not self.is_admin:
             with ui.header().classes('justify-center'):
-                ui.label("PATENT CENTER FORM").classes('text-h4')
+                ui.label("PATENT CENTER FORM").classes('text-1xl md:text-3xl')
                 self.spinner = ui.spinner(type='cube', color='white', size='lg')
                 self.spinner.visible = False
             self.large_screen()
             self.small_screen()
         else:
             with ui.header().classes('justify-center'):
-                ui.label("ADMIN PATENT CENTER FORM").classes('text-h4')
+                ui.label("ADMIN PATENT CENTER FORM").classes('text-1xl md:text-3xl')
                 self.spinner = ui.spinner(type='cube', color='white', size='lg')
                 self.spinner.visible = False
             if is_logged_in(app.storage.user):
